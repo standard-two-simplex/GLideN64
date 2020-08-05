@@ -1902,6 +1902,68 @@ public:
 	}
 };
 
+class ShaderLOD : public ShaderPart
+{
+public:
+	ShaderLOD() {
+		m_part =
+			"uniform lowp int uEnableLod;		\n"
+			"uniform mediump float uMinLod;		\n"
+			"uniform lowp int uMaxTile;			\n"
+			"uniform lowp int uTextureDetail;	\n"
+
+			"mediump float fMaxTile = float(uMaxTile); \n" // at most 7.0 ??
+			"mediump vec2 dx = abs(dFdx(vLodTexCoord)) * uScreenScale; \n"
+			"mediump vec2 dy = abs(dFdy(vLodTexCoord)) * uScreenScale; \n"
+			"mediump float lod = max(max(dx.x, dx.y), max(dy.x, dy.y));	\n"
+			"mediump float lod_clamp = max(lod,uMinLod); \n"
+			"mediump lod_log = clamp(log2(lod_clamp), 0.0, fMaxTile); \n"
+			"mediump float lod_tile = floor(lod_log); \n"
+			"mediump float lod_frac = lod/pow(2.0, lod_tile) - 1.0; \n "
+
+			"lowp int tile0, tile1; \n"
+			"if (lod_clamp < 1.0) { \n"  // Magnifying
+			"  switch(uTextureDetail) { \n"
+			"  case 0: \n" // !sharpen_en && !detail_en
+			"    tile0 = int(lod_tile); \n"
+			"    tile1 = int(lod_tile); \n"
+			"    break; \n"
+			"  case 1: \n" // sharpen_en && !detail_en
+			"    tile0 = int(lod_tile); \n"
+			"    tile1 = int(lod_tile + 1.0); \n"
+			"    break; \n"
+			"  case 2: \n" // !sharpen_en && detail_en 
+			"    tile0 = int(lod_tile); \n"
+			"    tile1 = int(lod_tile + 1.0); \n"
+			"    lod_frac = "
+			"    break; \n"
+			"  case 3: \n" // sharpen_en && detail_en (undefined behaviour?)
+			"    break;"
+			"} else { \n"
+			"  switch(uTextureDetail) { \n"
+			"  case 0: \n" // !sharpen_en && !detail_en
+			"    tile0 = int(lod_tile); \n"
+			"    tile1 = int(lod_tile + 1.0); \n"
+			"    break; \n"
+			"  case 1: \n" // sharpen_en && !detail_en
+			"    tile0 = int(lod_tile); \n"
+			"    tile1 = int(lod_tile + 1.0); \n"
+			"    break; \n"
+			"  case 2: \n" // !sharpen_en && detail_en 
+			"    tile0 = int(lod_tile + 1.0); \n"
+			"    tile1 = int(lod_tile + 2.0); \n"
+			"    break; \n"
+			"  case 3: \n" // sharpen_en && detail_en (undefined behaviour?)
+			"    break;"
+			"}"
+
+			//"mediump float lod_tile = magnify ? 0.0 : floor(log2(floor(lod))); \n"
+			//"bool distant = lod > 128.0 || lod_tile >= fMaxTile;	\n"
+			//"mediump float lod_frac = fract(lod/pow(2.0, lod_tile));	\n"
+		;
+	}
+};
+
 class ShaderMipmap : public ShaderPart
 {
 public:
@@ -2054,63 +2116,73 @@ public:
 					"uniform mediump float uMinLod;		\n"
 					"uniform lowp int uMaxTile;			\n"
 					"uniform lowp int uTextureDetail;	\n"
-					"																		\n"
+
 					"mediump float mipmap(out lowp vec4 readtex0, out lowp vec4 readtex1) {	\n"
+					
+					/*
+					"if (uEnableLod == 0) {\n"
 					"  READ_TEX_MIPMAP(readtex0, uTex0, tcData0, 0);					\n"
 					"  READ_TEX_MIPMAP(readtex1, uTex1, tcData1, 0);					\n"
-					"																		\n"
-					"  mediump float fMaxTile = float(uMaxTile);							\n"
-					"  mediump vec2 dx = abs(dFdx(vLodTexCoord));							\n"
-					"  dx *= uScreenScale;													\n"
-					"  mediump float lod = max(dx.x, dx.y);									\n"
-					"  bool magnify = lod < 1.0;											\n"
-					"  mediump float lod_tile = magnify ? 0.0 : floor(log2(floor(lod)));	\n"
-					"  bool distant = lod > 128.0 || lod_tile >= fMaxTile;					\n"
-					"  mediump float lod_frac = fract(lod/pow(2.0, lod_tile));				\n"
-					"  if (magnify) lod_frac = max(lod_frac, uMinLod);						\n"
-					"  if (uTextureDetail == 0)	{											\n"
-					"    if (distant) lod_frac = 1.0;										\n"
-					"    else if (magnify) lod_frac = 0.0;									\n"
-					"  }																	\n"
-					"  if (magnify && ((uTextureDetail & 1) != 0))							\n"
-					"      lod_frac = 1.0 - lod_frac;										\n"
-					"  if (uMaxTile == 0) {													\n"
-					"    if (uEnableLod != 0) {												\n"
-					"      if ((uTextureDetail & 2) == 0) readtex1 = readtex0;				\n"
-					"      else if (!magnify) readtex0 = readtex1;							\n"
-					"    }																	\n"
-					"    return lod_frac;													\n"
-					"  }																	\n"
-					"  if (uEnableLod == 0) return lod_frac;								\n"
-					"																		\n"
-					"  lod_tile = min(lod_tile, fMaxTile - 1.0);							\n"
-					"  lowp float lod_tile_m1 = max(0.0, lod_tile - 1.0);					\n"
-					"  lowp float lod_tile_p1 = min(fMaxTile - 1.0, lod_tile + 1.0);		\n"
-					"  lowp vec4 lodT, lodT_m1, lodT_p1;									\n"
-					"  READ_TEX_MIPMAP(lodT, uTex1, tcData1, lod_tile);						\n"
-					"  READ_TEX_MIPMAP(lodT_m1, uTex1, tcData1, lod_tile_m1);				\n"
-					"  READ_TEX_MIPMAP(lodT_p1, uTex1, tcData1, lod_tile_p1);				\n"
-					"  if (lod_tile < 1.0) {												\n"
-					"    if (magnify) {														\n"
-					//     !sharpen && !detail
-					"      if (uTextureDetail == 0) readtex1 = readtex0;					\n"
-					"    } else {															\n"
-					//     detail
-					"      if ((uTextureDetail & 2) != 0 ) {								\n"
-					"        readtex0 = lodT;												\n"
-					"        readtex1 = lodT_p1;											\n"
-					"      }																\n"
-					"    }																	\n"
-					"  } else {																\n"
-					"    if ((uTextureDetail & 2) != 0 ) {									\n"
-					"      readtex0 = lodT;													\n"
-					"      readtex1 = lodT_p1;												\n"
-					"    } else {															\n"
-					"      readtex0 = lodT_m1;												\n"
-					"      readtex1 = lodT;													\n"
-					"    }																	\n"
-					"  }																	\n"
-					"  return lod_frac;														\n"
+					"  return uMinLod;"
+					"} \n"
+					*/
+
+					"mediump float fMaxTile = float(uMaxTile); \n" // at most 7.0 ??
+					"mediump vec2 dx = abs(dFdx(vLodTexCoord)) * uScreenScale; \n"
+					"mediump vec2 dy = abs(dFdy(vLodTexCoord)) * uScreenScale; \n"
+					"mediump float lod = max(max(dx.x, dx.y), max(dy.x, dy.y));	\n"
+					"mediump float lod_clamp = max(lod,uMinLod); \n"
+					"mediump float lod_log = clamp(log2(lod_clamp), 0.0, fMaxTile - 1.0); \n"
+					"mediump int lod_tile = int(lod_log); \n"
+					"mediump float lod_frac = lod/pow(2.0, float(lod_tile)) - 1.0; \n "
+
+					
+					"lowp int tile0, tile1; \n"
+					"if (lod_clamp < 1.0) { \n"  // Magnifying
+					"  switch(uTextureDetail) { \n"
+					"  case 0: \n" // !sharpen_en && !detail_en
+					"    tile0 = lod_tile; \n"
+					"    tile1 = lod_tile; \n"
+					"    break; \n"
+					"  case 1: \n" // sharpen_en && !detail_en
+					"    tile0 = lod_tile; \n"
+					"    tile1 = lod_tile + 1; \n"
+					"    break; \n"
+					"  case 2: \n" // !sharpen_en && detail_en 
+					"    tile0 = lod_tile; \n"
+					"    tile1 = lod_tile + 1; \n"
+					"    lod_frac += 1.0; \n"
+					"    break; \n"
+					"  case 3: \n" // sharpen_en && detail_en (undefined behaviour?)
+					"    break;"
+					"  } \n"
+					"} \n"					
+					"else { \n"
+					"  switch(uTextureDetail) { \n"
+					"  case 0: \n" // !sharpen_en && !detail_en
+					"    tile0 = lod_tile; \n"
+					"    tile1 = lod_tile + 1; \n"
+					"    break; \n"
+					"  case 1: \n" // sharpen_en && !detail_en
+					"    tile0 = lod_tile; \n"
+					"    tile1 = lod_tile + 1; \n"
+					"    break; \n"
+					"  case 2: \n" // !sharpen_en && detail_en 
+					"    tile0 = lod_tile + 1; \n"
+					"    tile1 = lod_tile + 2; \n"
+					"    break; \n"
+					"  case 3: \n" // sharpen_en && detail_en (undefined behaviour?)
+					"    break;"
+					"  } \n"
+					"} \n"
+
+					"if (tile0 == 0) { READ_TEX_MIPMAP(readtex0, uTex0, tcData0, 0); }"
+					"else {READ_TEX_MIPMAP(readtex0, uTex1, tcData0, tile0 - 1); }"
+					"if (tile1 == 0) { READ_TEX_MIPMAP(readtex1, uTex0, tcData0, 0); }"
+					"else {READ_TEX_MIPMAP(readtex1, uTex1, tcData0, tile1 - 1); }"
+					//"  READ_TEX_MIPMAP(readtex0, uTex0, tcData0, tile0);					\n"
+					//"  READ_TEX_MIPMAP(readtex1, uTex1, tcData1, tile1);					\n"
+					"  return lod_frac; \n"
 					"}																		\n"
 				;
 			}
