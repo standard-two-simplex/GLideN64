@@ -1917,49 +1917,49 @@ public:
 			"mediump vec2 dy = abs(dFdy(vLodTexCoord)) * uScreenScale; \n"
 			"mediump float lod = max(max(dx.x, dx.y), max(dy.x, dy.y));	\n"
 			"mediump float lod_clamp = max(lod,uMinLod); \n"
-			"mediump lod_log = clamp(log2(lod_clamp), 0.0, fMaxTile); \n"
-			"mediump float lod_tile = floor(lod_log); \n"
-			"mediump float lod_frac = lod/pow(2.0, lod_tile) - 1.0; \n "
+			"mediump int lod_tile = clamp(int(log2(lod_clamp)), 0, uMaxTile); \n"
+			"mediump int lod_tile_p1 = min(lod_tile + 1, uMaxTile); \n"
+			"mediump float lod_frac = lod_clamp/pow(2.0, float(lod_tile)) - 1.0; \n "
+			//"mediump float lod_frac = clamp(lod_clamp/pow(2.0, float(lod_tile)) - 1.0,-1.0,1.0); \n "
 
 			"lowp int tile0, tile1; \n"
 			"if (lod_clamp < 1.0) { \n"  // Magnifying
 			"  switch(uTextureDetail) { \n"
 			"  case 0: \n" // !sharpen_en && !detail_en
-			"    tile0 = int(lod_tile); \n"
-			"    tile1 = int(lod_tile); \n"
+			"    tile0 = 0; \n"
+			"    tile1 = 0; \n"
 			"    break; \n"
 			"  case 1: \n" // sharpen_en && !detail_en
-			"    tile0 = int(lod_tile); \n"
-			"    tile1 = int(lod_tile + 1.0); \n"
+			"    tile0 = 0; \n"
+			"    tile1 = 1; \n"
 			"    break; \n"
 			"  case 2: \n" // !sharpen_en && detail_en 
-			"    tile0 = int(lod_tile); \n"
-			"    tile1 = int(lod_tile + 1.0); \n"
-			"    lod_frac = "
+			"    tile0 = 0; \n"
+			"    tile1 = 0; \n"  // SHOULD BE 1
+			"    lod_frac += 1.0; \n"
 			"    break; \n"
 			"  case 3: \n" // sharpen_en && detail_en (undefined behaviour?)
 			"    break;"
-			"} else { \n"
+			"  } \n"
+			"} \n"
+			"else { \n"
 			"  switch(uTextureDetail) { \n"
 			"  case 0: \n" // !sharpen_en && !detail_en
-			"    tile0 = int(lod_tile); \n"
-			"    tile1 = int(lod_tile + 1.0); \n"
+			"    tile0 = lod_tile; \n"
+			"    tile1 = lod_tile_p1; \n"
 			"    break; \n"
 			"  case 1: \n" // sharpen_en && !detail_en
-			"    tile0 = int(lod_tile); \n"
-			"    tile1 = int(lod_tile + 1.0); \n"
+			"    tile0 = lod_tile; \n"
+			"    tile1 = lod_tile_p1; \n"
 			"    break; \n"
 			"  case 2: \n" // !sharpen_en && detail_en 
-			"    tile0 = int(lod_tile + 1.0); \n"
-			"    tile1 = int(lod_tile + 2.0); \n"
+			"    tile0 = lod_tile; \n"     // SHOULD BE lod_tile + 1 CHECK Beetle Adv. Racing
+			"    tile1 = lod_tile_p1; \n"  // SHOULD BE lod_tile_p1 + 1
 			"    break; \n"
 			"  case 3: \n" // sharpen_en && detail_en (undefined behaviour?)
 			"    break;"
-			"}"
-
-			//"mediump float lod_tile = magnify ? 0.0 : floor(log2(floor(lod))); \n"
-			//"bool distant = lod > 128.0 || lod_tile >= fMaxTile;	\n"
-			//"mediump float lod_frac = fract(lod/pow(2.0, lod_tile));	\n"
+			"  } \n"
+			"} \n"
 		;
 	}
 };
@@ -2132,29 +2132,27 @@ public:
 					"mediump vec2 dy = abs(dFdy(vLodTexCoord)) * uScreenScale; \n"
 					"mediump float lod = max(max(dx.x, dx.y), max(dy.x, dy.y));	\n"
 					"mediump float lod_clamp = max(lod,uMinLod); \n"
-					//"mediump float lod_clamp = lod; \n"
-					//"mediump float lod_log = clamp(log2(lod_clamp), 0.0, fMaxTile); \n"
-					"mediump int lod_tile = int(clamp(log2(lod_clamp), 0.0, fMaxTile)); \n"
-					//"mediump float lod_frac = lod_log - float(lod_tile); \n"
+					"mediump int lod_tile = clamp(int(log2(lod_clamp)), 0, uMaxTile); \n"
+					"mediump int lod_tile_p1 = min(lod_tile + 1, uMaxTile); \n"
 					"mediump float lod_frac = lod_clamp/pow(2.0, float(lod_tile)) - 1.0; \n "
+					//"mediump float lod_frac = clamp(lod_clamp/pow(2.0, float(lod_tile)) - 1.0,-1.0,1.0); \n "
+
 
 					
 					"lowp int tile0, tile1; \n"
-					"lowp int lod_tile_p1 = min(lod_tile + 1, uMaxTile); \n"
-					"lowp int lod_tile_p2 = min(lod_tile + 2, uMaxTile); \n"
 					"if (lod_clamp < 1.0) { \n"  // Magnifying
 					"  switch(uTextureDetail) { \n"
 					"  case 0: \n" // !sharpen_en && !detail_en
-					"    tile0 = lod_tile; \n"
-					"    tile1 = lod_tile; \n"
+					"    tile0 = 0; \n"
+					"    tile1 = 0; \n"
 					"    break; \n"
 					"  case 1: \n" // sharpen_en && !detail_en
-					"    tile0 = lod_tile; \n"
-					"    tile1 = lod_tile_p1; \n"
+					"    tile0 = 0; \n"
+					"    tile1 = 1; \n"
 					"    break; \n"
 					"  case 2: \n" // !sharpen_en && detail_en 
-					"    tile0 = lod_tile; \n"
-					"    tile1 = lod_tile_p1; \n"
+					"    tile0 = 0; \n"
+					"    tile1 = 0; \n"  // SHOULD BE 1
 					"    lod_frac += 1.0; \n"
 					"    break; \n"
 					"  case 3: \n" // sharpen_en && detail_en (undefined behaviour?)
@@ -2172,8 +2170,8 @@ public:
 					"    tile1 = lod_tile_p1; \n"
 					"    break; \n"
 					"  case 2: \n" // !sharpen_en && detail_en 
-					"    tile0 = lod_tile_p1; \n"
-					"    tile1 = lod_tile_p2; \n"
+					"    tile0 = lod_tile; \n"     // SHOULD BE lod_tile + 1 CHECK Beetle Adv. Racing
+					"    tile1 = lod_tile_p1; \n"  // SHOULD BE lod_tile_p1 + 1
 					"    break; \n"
 					"  case 3: \n" // sharpen_en && detail_en (undefined behaviour?)
 					"    break;"
@@ -2184,9 +2182,10 @@ public:
 					"else {READ_TEX_MIPMAP(readtex0, uTex1, tcData1, tile0 -1);} \n"
 					"if(tile1 == 0) { READ_TEX_MIPMAP(readtex1, uTex0, tcData0, 0); }\n"
 					"else {READ_TEX_MIPMAP(readtex1, uTex1, tcData1, tile1 -1);} \n"
-					//"  READ_TEX_MIPMAP(readtex0, uTex0, tcData0, 0);					\n"
-					//"  READ_TEX_MIPMAP(readtex1, uTex1, tcData1, uMaxTile);					\n"
 					"  return lod_frac; \n"
+					//"  READ_TEX_MIPMAP(readtex0, uTex0, tcData0, 0);					\n"
+					//"  READ_TEX_MIPMAP(readtex1, uTex1, tcData1, uMaxTile-1);					\n"
+					//"  return 0.0; \n"
 					"}																		\n"
 				;
 			}
