@@ -2132,12 +2132,16 @@ public:
 					"mediump vec2 dy = abs(dFdy(vLodTexCoord)) * uScreenScale; \n"
 					"mediump float lod = max(max(dx.x, dx.y), max(dy.x, dy.y));	\n"
 					"mediump float lod_clamp = max(lod,uMinLod); \n"
-					"mediump float lod_log = clamp(log2(lod_clamp), 0.0, fMaxTile - 1.0); \n"
-					"mediump int lod_tile = int(lod_log); \n"
-					"mediump float lod_frac = lod/pow(2.0, float(lod_tile)) - 1.0; \n "
+					//"mediump float lod_clamp = lod; \n"
+					//"mediump float lod_log = clamp(log2(lod_clamp), 0.0, fMaxTile); \n"
+					"mediump int lod_tile = int(clamp(log2(lod_clamp), 0.0, fMaxTile)); \n"
+					//"mediump float lod_frac = lod_log - float(lod_tile); \n"
+					"mediump float lod_frac = lod_clamp/pow(2.0, float(lod_tile)) - 1.0; \n "
 
 					
 					"lowp int tile0, tile1; \n"
+					"lowp int lod_tile_p1 = min(lod_tile + 1, uMaxTile); \n"
+					"lowp int lod_tile_p2 = min(lod_tile + 2, uMaxTile); \n"
 					"if (lod_clamp < 1.0) { \n"  // Magnifying
 					"  switch(uTextureDetail) { \n"
 					"  case 0: \n" // !sharpen_en && !detail_en
@@ -2146,11 +2150,11 @@ public:
 					"    break; \n"
 					"  case 1: \n" // sharpen_en && !detail_en
 					"    tile0 = lod_tile; \n"
-					"    tile1 = lod_tile + 1; \n"
+					"    tile1 = lod_tile_p1; \n"
 					"    break; \n"
 					"  case 2: \n" // !sharpen_en && detail_en 
 					"    tile0 = lod_tile; \n"
-					"    tile1 = lod_tile + 1; \n"
+					"    tile1 = lod_tile_p1; \n"
 					"    lod_frac += 1.0; \n"
 					"    break; \n"
 					"  case 3: \n" // sharpen_en && detail_en (undefined behaviour?)
@@ -2161,27 +2165,27 @@ public:
 					"  switch(uTextureDetail) { \n"
 					"  case 0: \n" // !sharpen_en && !detail_en
 					"    tile0 = lod_tile; \n"
-					"    tile1 = lod_tile + 1; \n"
+					"    tile1 = lod_tile_p1; \n"
 					"    break; \n"
 					"  case 1: \n" // sharpen_en && !detail_en
 					"    tile0 = lod_tile; \n"
-					"    tile1 = lod_tile + 1; \n"
+					"    tile1 = lod_tile_p1; \n"
 					"    break; \n"
 					"  case 2: \n" // !sharpen_en && detail_en 
-					"    tile0 = lod_tile + 1; \n"
-					"    tile1 = lod_tile + 2; \n"
+					"    tile0 = lod_tile_p1; \n"
+					"    tile1 = lod_tile_p2; \n"
 					"    break; \n"
 					"  case 3: \n" // sharpen_en && detail_en (undefined behaviour?)
 					"    break;"
 					"  } \n"
 					"} \n"
 
-					"if (tile0 == 0) { READ_TEX_MIPMAP(readtex0, uTex0, tcData0, 0); }"
-					"else {READ_TEX_MIPMAP(readtex0, uTex1, tcData0, tile0 - 1); }"
-					"if (tile1 == 0) { READ_TEX_MIPMAP(readtex1, uTex0, tcData0, 0); }"
-					"else {READ_TEX_MIPMAP(readtex1, uTex1, tcData0, tile1 - 1); }"
-					//"  READ_TEX_MIPMAP(readtex0, uTex0, tcData0, tile0);					\n"
-					//"  READ_TEX_MIPMAP(readtex1, uTex1, tcData1, tile1);					\n"
+					"if(tile0 == 0) { READ_TEX_MIPMAP(readtex0, uTex0, tcData0, 0); }\n"
+					"else {READ_TEX_MIPMAP(readtex0, uTex1, tcData1, tile0 -1);} \n"
+					"if(tile1 == 0) { READ_TEX_MIPMAP(readtex1, uTex0, tcData0, 0); }\n"
+					"else {READ_TEX_MIPMAP(readtex1, uTex1, tcData1, tile1 -1);} \n"
+					//"  READ_TEX_MIPMAP(readtex0, uTex0, tcData0, 0);					\n"
+					//"  READ_TEX_MIPMAP(readtex1, uTex1, tcData1, uMaxTile);					\n"
 					"  return lod_frac; \n"
 					"}																		\n"
 				;
