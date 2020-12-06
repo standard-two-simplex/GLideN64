@@ -69,6 +69,33 @@ const char *ColorInput[] = {
 };
 
 static
+const char* ColorInput2[] = {
+	"combined_color.rgb",
+	"readtex2.rgb",
+	"readtex1.rgb",
+	"uPrimColor.rgb",
+	"vec_color.rgb",
+	"uEnvColor.rgb",
+	"uCenterColor.rgb",
+	"uScaleColor.rgb",
+	"combined_color.a",
+	"vec3(readtex2.a)",
+	"vec3(readtex1.a)",
+	"vec3(uPrimColor.a)",
+	"vec3(vec_color.a)",
+	"vec3(uEnvColor.a)",
+	"vec3(lod_frac)",
+	"vec3(uPrimLod)",
+	"vec3(0.5 + 0.5*snoise())",
+	"vec3(uK4)",
+	"vec3(uK5)",
+	"vec3(1.0)",
+	"vec3(0.0)",
+	"vec3(0.5)"
+};
+
+
+static
 const char *AlphaInput[] = {
 	"combined_color.a",
 	"readtex0.a",
@@ -93,6 +120,33 @@ const char *AlphaInput[] = {
 	"0.0",
 	"0.5"
 };
+
+static
+const char* AlphaInput2[] = {
+	"combined_color.a",
+	"readtex2.a",
+	"readtex1.a",
+	"uPrimColor.a",
+	"vec_color.a",
+	"uEnvColor.a",
+	"uCenterColor.a",
+	"uScaleColor.a",
+	"combined_color.a",
+	"readtex2.a",
+	"readtex1.a",
+	"uPrimColor.a",
+	"vec_color.a",
+	"uEnvColor.a",
+	"lod_frac",
+	"uPrimLod",
+	"0.5 + 0.5*snoise()",
+	"uK4",
+	"uK5",
+	"1.0",
+	"0.0",
+	"0.5"
+};
+
 
 inline
 u32 correctFirstStageParam(u32 _param)
@@ -927,6 +981,7 @@ public:
 			"highp vec2 texCoord1;					\n"
 			"highp vec2 tcData0[5];					\n"
 			"highp vec2 tcData1[5];					\n"
+			"highp vec2 tcData2[5];					\n"
 			"uniform lowp int uCvgDest;				\n"
 			"uniform lowp int uBlendAlphaMode;		\n"
 			;
@@ -1569,8 +1624,9 @@ public:
 					;
 			} else {
 				m_part =
-					"  lowp vec4 readtex0;																	\n"
+					"  lowp vec4 readtex0, readtex2;																	\n"
 					"  READ_TEX(readtex0, uTex0, tcData0, uFbMonochrome[0], uFbFixedAlpha[0])			\n"
+					"  READ_TEX(readtex2, uTex0, tcData2, uFbMonochrome[0], uFbFixedAlpha[0])			\n"
 					;
 			}
 		}
@@ -1611,8 +1667,10 @@ public:
 						"    READ_TEX(readtex0, uTex0, tcData0, uFbMonochrome[0], uFbFixedAlpha[0])						\n"
 						"  } else readtex0 = readTexMS(uMSTex0, tcData0, uFbMonochrome[0], uFbFixedAlpha[0]);			\n";
 				} else {
-					shaderPart = "  lowp vec4 readtex0;																		\n"
-								" READ_TEX(readtex0, uTex0, tcData0, uFbMonochrome[0], uFbFixedAlpha[0])				\n";
+					shaderPart = "  lowp vec4 readtex0, readtex2;																		\n"
+								" READ_TEX(readtex0, uTex0, tcData0, uFbMonochrome[0], uFbFixedAlpha[0]) \n"
+								" READ_TEX(readtex2, uTex0, tcData2, uFbMonochrome[0], uFbFixedAlpha[0]) \n"
+						;
 				}
 			}
 
@@ -2570,7 +2628,9 @@ public:
 	ShaderFragmentTextureEngineTex0(const opengl::GLInfo _glinfo)
 	{
 		m_part =
+			"highp vec2 delta = uScreenScale * vec2(dFdx(vTexCoord0.s), dFdy(vTexCoord0.t)); \n"
 			"textureEngine0(vTexCoord0, tcData0); \n"
+			"textureEngine0(vTexCoord0 + delta, tcData2); \n"
 			;
 	}
 };
@@ -2667,7 +2727,7 @@ CombinerInputs CombinerProgramBuilder::compileCombiner(const CombinerKey & _key,
 		if (_alpha.numStages == 2) {
 			ssShader << "  alpha2 = ";
 			_correctSecondStageParams(_alpha.stage[1]);
-			inputs += _compileCombiner(_alpha.stage[1], AlphaInput, ssShader);
+			inputs += _compileCombiner(_alpha.stage[1], AlphaInput2, ssShader);
 		}
 		else
 			ssShader << "  alpha2 = alpha1;" << std::endl;
@@ -2677,7 +2737,8 @@ CombinerInputs CombinerProgramBuilder::compileCombiner(const CombinerKey & _key,
 		if (_color.numStages == 2) {
 			ssShader << "  color2 = ";
 			_correctSecondStageParams(_color.stage[1]);
-			inputs += _compileCombiner(_color.stage[1], ColorInput, ssShader);
+			//inputs += _compileCombiner(_color.stage[1], ColorInput, ssShader);
+			inputs += _compileCombiner(_color.stage[1], ColorInput2, ssShader);
 		}
 		else
 			ssShader << "  color2 = color1;" << std::endl;
