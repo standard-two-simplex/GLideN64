@@ -244,8 +244,7 @@ public:
 			if (gDP.otherMode.textureFilter != G_TF_POINT && gDP.otherMode.cycleType != G_CYC_COPY) {
 				texCoordOffset[0] = -0.5f * gDP.lastTexRectInfo.dsdx;
 				texCoordOffset[1] = -0.5f * gDP.lastTexRectInfo.dtdy;
-			}
-			else {
+			} else {
 				texCoordOffset[0] = (gDP.lastTexRectInfo.dsdx >= 0.0f ? -0.5f / scale[0] : -1.0f + 0.5f / scale[0]) * gDP.lastTexRectInfo.dsdx;
 				texCoordOffset[1] = (gDP.lastTexRectInfo.dtdy >= 0.0f ? -0.5f / scale[1] : -1.0f + 0.5f / scale[1]) * gDP.lastTexRectInfo.dtdy;
 			}
