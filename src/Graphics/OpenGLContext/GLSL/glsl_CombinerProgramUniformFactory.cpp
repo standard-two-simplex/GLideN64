@@ -257,7 +257,7 @@ public:
 		}
 		float tcbounds[2][4] = {};
 		if (useTexCoordBounds) {
-			f32 s, t, dsdx, dtdy, uls, lrs, ult, lrt;
+			f32 s, t, uls, lrs, ult, lrt;
 			s = _FIXED2FLOAT(gDP.lastTexRectInfo.s, 5);
 			t = _FIXED2FLOAT(gDP.lastTexRectInfo.t, 5);
 			uls = s + (ceilf(gDP.lastTexRectInfo.ulx) - gDP.lastTexRectInfo.ulx) * gDP.lastTexRectInfo.dsdx;
@@ -694,7 +694,7 @@ public:
 
 	void update(bool _force) override
 	{
-		float ySign = !GBI.isNegativeY() ? 1.0 : -1.0;
+		float ySign = GBI.isNegativeY() ? -1.0f : 1.0f;
 		uVTrans.set(gSP.viewport.vtrans[0], gSP.viewport.vtrans[1], _force);
 		uVScale.set(gSP.viewport.vscale[0], ySign*gSP.viewport.vscale[1], _force);
 	}
