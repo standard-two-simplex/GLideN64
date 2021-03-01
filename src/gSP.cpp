@@ -1656,8 +1656,6 @@ void gSPModifyVertex( u32 _vtx, u32 _where, u32 _val )
 			if ((config.generalEmulation.hacks & hack_ModifyVertexXyInShader) == 0) {
 				
 				vtx0.x = (vtx0.x - gSP.viewport.vtrans[0]) / gSP.viewport.vscale[0];
-				//if (gSP.viewport.vscale[0] < 0)
-				//	vtx0.x = -vtx0.x;
 				vtx0.x *= vtx0.w;
 
 				if (dwnd().isAdjustScreen()) {
@@ -1668,8 +1666,6 @@ void gSPModifyVertex( u32 _vtx, u32 _where, u32 _val )
 				}
 
 				vtx0.y = -(vtx0.y - gSP.viewport.vtrans[1]) / gSP.viewport.vscale[1];
-				//if (gSP.viewport.vscale[1] < 0)
-				//	vtx0.y = -vtx0.y;
 				vtx0.y *= vtx0.w;
 			*/
 			if (false) {
