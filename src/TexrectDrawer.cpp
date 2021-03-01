@@ -383,7 +383,7 @@ bool TexrectDrawer::draw()
 	const float W = 1024.0f;
 	const float Z = m_Z * 1024.0f;
 
-	drawer._updateScreenCoordsViewport2(m_pBuffer);
+	drawer._updateViewport(m_pBuffer);
 
 	textureCache().activateTexture(0, m_pTexture);
 	// Disable filtering to avoid black outlines

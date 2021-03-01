@@ -256,76 +256,10 @@ void _adjustViewportToClipRatio(s32 & x, s32 & y, s32 & width, s32 & height)
 }
 
 
-void GraphicsDrawer::_updateViewport() const
-{
-	DisplayWindow & wnd = DisplayWindow::get();
-	FrameBuffer * pCurrentBuffer = frameBufferList().getCurrent();
-	if (pCurrentBuffer == nullptr) {
-		const f32 scaleX = wnd.getScaleX();
-		const f32 scaleY = wnd.getScaleY();
-		float Xf = gSP.viewport.vscale[0] < 0 ? (gSP.viewport.x + gSP.viewport.vscale[0] * 2.0f) : gSP.viewport.x;
-		if (_needAdjustCoordinate(wnd))
-			Xf = _adjustViewportX(Xf);
-		s32 X = static_cast<s32>(Xf * scaleX);
-		s32 Y = static_cast<s32>(gSP.viewport.y * scaleY);
-		s32 WIDTH = std::max(static_cast<s32>(gSP.viewport.width * scaleX), 0);
-		s32 HEIGHT = std::max(static_cast<s32>(gSP.viewport.height * scaleY), 0);
-		_adjustViewportToClipRatio(X, Y, WIDTH, HEIGHT);
-		gfxContext.setViewport(X, Y, WIDTH, HEIGHT);
-	} else {
-		const f32 scaleX = pCurrentBuffer->m_scale;
-		const f32 scaleY = pCurrentBuffer->m_scale;
-		float Xf = gSP.viewport.vscale[0] < 0 ? (gSP.viewport.x + gSP.viewport.vscale[0] * 2.0f) : gSP.viewport.x;
-		Xf += f32(pCurrentBuffer->m_originX);
-		if (_needAdjustCoordinate(wnd))
-			Xf = _adjustViewportX(Xf);
-		s32 X = roundup(Xf, scaleX);
-		float Yf = gSP.viewport.vscale[1] < 0 ? (gSP.viewport.y + gSP.viewport.vscale[1] * 2.0f) : gSP.viewport.y;
-		Yf += f32(pCurrentBuffer->m_originY);
-		s32 Y = roundup(Yf, scaleY);
-		s32 WIDTH = std::max(roundup(gSP.viewport.width, scaleX), 0);
-		s32 HEIGHT = std::max(roundup(gSP.viewport.height, scaleY), 0);
-		_adjustViewportToClipRatio(X, Y, WIDTH, HEIGHT);
-		gfxContext.setViewport(X, Y, WIDTH, HEIGHT);
-	}
-	gSP.changed &= ~CHANGED_VIEWPORT;
-}
 
-void GraphicsDrawer::_updateScreenCoordsViewport(const FrameBuffer * _pBuffer) const
-{
-	DisplayWindow & wnd = DisplayWindow::get();
-	const FrameBuffer * pCurrentBuffer = _pBuffer != nullptr ? _pBuffer : frameBufferList().getCurrent();
-
-	u32 bufferWidth, bufferHeight;
-	f32 viewportScaleX, viewportScaleY;
-	s32 X = 0, Y = 0;
-	if (pCurrentBuffer == nullptr) {
-		bufferWidth = VI.width;
-		bufferHeight = VI.height;
-		viewportScaleX = wnd.getScaleX();
-		viewportScaleY = wnd.getScaleY();
-	} else {
-		bufferWidth = pCurrentBuffer->m_width;
-		bufferHeight = VI_GetMaxBufferHeight(static_cast<u16>(bufferWidth));
-		viewportScaleX = viewportScaleY = pCurrentBuffer->m_scale;
-		X = roundup(f32(pCurrentBuffer->m_originX), viewportScaleX);
-		Y = roundup(f32(pCurrentBuffer->m_originY), viewportScaleY);
-		if (RSP.LLE || gSP.viewport.width == 0.0f) {
-			gSP.viewport.width = f32(bufferWidth);
-			gSP.viewport.height = f32(bufferHeight);
-		}
-	}
-	s32 WIDTH = roundup(f32(bufferWidth), viewportScaleX);
-	s32 HEIGHT = roundup(f32(bufferHeight), viewportScaleY);
-	_adjustViewportToClipRatio(X, Y, WIDTH, HEIGHT);
-	gfxContext.setViewport(X, Y, WIDTH, HEIGHT);
-	gSP.changed |= CHANGED_VIEWPORT;
-}
-
-void GraphicsDrawer::_updateScreenCoordsViewport2(const FrameBuffer* _pBuffer) const
+void GraphicsDrawer::_updateViewport(const FrameBuffer* _pBuffer) const
 {
 	s32 X, Y, WIDTH, HEIGHT;
-	const s32 scale = config.frameBufferEmulation.nativeResFactor;
 	const FrameBuffer* pCurrentBuffer = _pBuffer != nullptr ? _pBuffer : frameBufferList().getCurrent();
 	f32 scaleX, scaleY;
 	if (pCurrentBuffer != nullptr) {
@@ -746,8 +680,7 @@ void GraphicsDrawer::_updateStates(DrawingState _drawingState) const
 		updateScissor(frameBufferList().getCurrent());
 
 	if (gSP.changed & CHANGED_VIEWPORT)
-		// _updateViewport();
-		_updateScreenCoordsViewport2();
+		_updateViewport();
 
 	if ((gSP.changed & CHANGED_TEXTURE) ||
 		(gDP.changed & (CHANGED_TILE | CHANGED_TMEM)) ||
@@ -819,7 +752,7 @@ void GraphicsDrawer::_prepareDrawTriangle(DrawingState _drawingState)
 	m_bFlatColors = bFlatColors;
 
 	if ((m_modifyVertices & MODIFY_XY) != 0)
-		_updateScreenCoordsViewport2();
+		_updateViewport();
 	m_modifyVertices = 0;
 }
 
@@ -1065,7 +998,7 @@ void GraphicsDrawer::drawLine(u32 _v0, u32 _v1, float _width)
 	m_drawingState = DrawingState::Line;
 
 	if ((triangles.vertices[_v0].modify & MODIFY_XY) != 0)
-		_updateScreenCoordsViewport2();
+		_updateViewport();
 
 	SPVertex vertexBuf[2] = { triangles.vertices[_v0], triangles.vertices[_v1] };
 	gfxContext.drawLine(lineWidth, vertexBuf);
@@ -1087,7 +1020,7 @@ void GraphicsDrawer::drawRect(int _ulx, int _uly, int _lrx, int _lry)
 
 	m_drawingState = DrawingState::Rect;
 
-	_updateScreenCoordsViewport2();
+	_updateViewport();
 
 	gfxContext.enable(enable::CULL_FACE, false);
 
@@ -1509,7 +1442,7 @@ void GraphicsDrawer::drawTexturedRect(const TexturedRectParams & _params)
 			return;
 	}
 
-	_updateScreenCoordsViewport2(_params.pBuffer);
+	_updateViewport(_params.pBuffer);
 	Context::DrawRectParameters rectParams;
 	rectParams.mode = drawmode::TRIANGLE_STRIP;
 	rectParams.verticesCount = 4;
