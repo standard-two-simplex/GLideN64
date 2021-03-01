@@ -242,8 +242,8 @@ public:
 		/* places them in the fragment center. As a result, a normal approach results in shifted texture	*/
 		/* coordinates. In native resolution, this difference can be negated by shifting vertices by 0.5.	*/
 		/* In higher resolutions, there	are more samples than the game intends, so shifting is not very		*/
-		/* effective. Still, an heuristic is applied to render texture rectangles as correctly as possible. */
-		/* See issue #2324 for details.																			*/
+		/* effective. Still, an heuristic is applied to render texture rectangles as correctly as possible  */
+		/* in higher resolutions too. See issue #2324 for details. 											*/
 		const float vertexOffset = isNativeRes ? 0.5f : 0.0f;
 		float texCoordOffset[2] = { 0.0f, 0.0f };
 		if (isTexRect && !isNativeRes) {
