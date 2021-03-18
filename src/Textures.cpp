@@ -568,11 +568,14 @@ static
 void _calcTileSizes(u32 _t, TileSizes & _sizes, gDPTile * _pLoadTile)
 {
 	gDPTile * pTile = _t < 2 ? gSP.textureTile[_t] : &gDP.tiles[_t];
-	pTile->masks = pTile->originalMaskS;
-	pTile->maskt = pTile->originalMaskT;
+
+#if 0
+	 gDPTile* pTile = &gDP.tiles[_t];
+	 pTile->masks = pTile->originalMaskS;
+	 pTile->maskt = pTile->originalMaskT;
 
 	u32 tileWidth = ((pTile->lrs - pTile->uls) & 0x03FF) + 1;
-	u32 tileHeight = ((pTile->lrt - pTile->ult) & 0x03FF) + 1;
+	 u32 tileHeight = ((pTile->lrt - pTile->ult) & 0x03FF) + 1;
 
 	const u32 tMemMask = gDP.otherMode.textureLUT == G_TT_NONE ? 0x1FF : 0xFF;
 	gDPLoadTileInfo &info = gDP.loadInfo[pTile->tmem & tMemMask];
@@ -639,8 +642,6 @@ void _calcTileSizes(u32 _t, TileSizes & _sizes, gDPTile * _pLoadTile)
 			height = tileHeight;
 	}
 
-	_sizes.clampWidth = (pTile->clamps && gDP.otherMode.cycleType != G_CYC_COPY) ? tileWidth : width;
-	_sizes.clampHeight = (pTile->clampt && gDP.otherMode.cycleType != G_CYC_COPY) ? tileHeight : height;
 
 	_sizes.width = (info.loadType == LOADTYPE_TILE &&
 					pTile->clamps != 0 &&
@@ -652,6 +653,24 @@ void _calcTileSizes(u32 _t, TileSizes & _sizes, gDPTile * _pLoadTile)
 					pTile->maskt == 0) ?
 					_sizes.clampHeight :
 					height;
+#endif
+
+#define mmin(a,b) ((a) < (b)) ? (a) : (b)
+#define mmax(a,b) ((a) > (b)) ? (a) : (b)
+
+	bool split_texture = pTile->size == G_IM_SIZ_32b || pTile->format == G_IM_FMT_YUV;
+	bool ci_texture = pTile->format == G_IM_FMT_CI;
+	u32 tmem_size = split_texture || ci_texture ? 256 : 512;
+	u32 shift = split_texture ? pTile->size - 1 : pTile->size;
+	u32 line = mmax(1, pTile->line);
+	u32 width = (line << 4) >> shift;
+	u32 height = tmem_size / line;
+
+	_sizes.width = width;
+	_sizes.height = height;
+	_sizes.clampWidth = width;
+	_sizes.clampHeight = height;
+	_sizes.bytes = 512 << 3;
 }
 
 
