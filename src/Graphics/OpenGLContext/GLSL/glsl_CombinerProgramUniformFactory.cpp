@@ -709,7 +709,7 @@ public:
 			}
 		}
 		uVTrans.set(gSP.viewport.vtrans[0], gSP.viewport.vtrans[1], _force);
-		uVScale.set(gSP.viewport.vscale[0], gSP.viewport.vscale[1], _force);
+		uVScale.set(gSP.viewport.vscale[0], -gSP.viewport.vscale[1], _force);
 		uAdjustTrans.set(adjustTrans[0], adjustTrans[1], _force);
 		uAdjustScale.set(adjustScale[0], adjustScale[1], _force);
 	}
