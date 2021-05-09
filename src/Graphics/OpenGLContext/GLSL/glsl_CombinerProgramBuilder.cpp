@@ -7,6 +7,7 @@
 #include "glsl_CombinerProgramImpl.h"
 #include "glsl_CombinerProgramBuilder.h"
 #include "glsl_CombinerProgramUniformFactory.h"
+#include "GraphicsDrawer.h"
 
 using namespace glsl;
 
@@ -268,6 +269,9 @@ public:
 			m_part = ss.str();
 		}
 		m_part += "uniform lowp vec2 uVertexOffset; \n";
+		std::stringstream ss;
+		ss << "const lowp float screenSizeDims = " << SCREEN_SIZE_DIM << ";" << std::endl;
+		m_part += ss.str();
 	}
 };
 
@@ -513,8 +517,9 @@ public:
 			m_part = "  gl_Position.z /= 8.0;	\n";
 		}
 		m_part +=
-			" gl_Position.xy += uVertexOffset * vec2(gl_Position.w); \n"
-			" gl_Position.zw *= vec2(1024.0);		 \n"
+			" gl_Position.xy += uVertexOffset * vec2(gl_Position.w);		\n"
+			" gl_Position.xy -= vec2(0.5*screenSizeDims) * gl_Position.ww;	\n"
+			" gl_Position.xy /= vec2(0.5*screenSizeDims);					\n"
 			"} \n"
 			;
 	}
